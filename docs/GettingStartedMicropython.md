@@ -66,9 +66,9 @@ esptool.py --chip esp32 --port /dev/ttyUSB0 write_flash -z 0x1000 esp32-20210902
 The flashing process should restart your device so leave it plugged in. Next you can connect to it with putty to get
 a prompt:
 
-![](img\20220102-PuttySettings.PNG)
+![](img/20220102-PuttySettings.PNG)
 
-![](img\20221002-MicropythonTerminal.PNG)
+![](img/20221002-MicropythonTerminal.PNG)
 
 For linux you can simply use screen to connect to it:
 
