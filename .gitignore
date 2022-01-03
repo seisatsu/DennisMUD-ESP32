@@ -1,0 +1,6 @@
+# Firmware files
+firmware/*.bin
+
+# Python virtual environments
+venv
+.venv
