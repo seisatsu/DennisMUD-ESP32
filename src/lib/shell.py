@@ -25,8 +25,6 @@
 # IN THE SOFTWARE.
 # **********
 
-import importlib.machinery
-import importlib.util
 import os
 import string
 import sys
