@@ -1,0 +1,25 @@
+{
+  "database": {
+    "filename": "world.json",
+    "backups": 3
+  },
+  "log": {
+    "stdout": true,
+    "file": "dennis.server.log",
+    "level": "debug"
+  },
+  "telnet": {
+    "enabled": true,
+    "port": 37381
+  },
+  "websocket": {
+    "enabled": true,
+    "host": "dennis.seisat.su",
+    "port": 37380,
+    "secure": false,
+    "key": "ssl/dennis.key",
+    "cert": "ssl/dennis.cert"
+  },
+  "disabled": ["purge_exits", "purge_entrances"],
+  "shutdown_delay": 10
+}

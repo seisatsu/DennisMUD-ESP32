@@ -1,0 +1,40 @@
+{
+  "first_room": {
+    "name": "Nexus",
+    "desc": "The First Room",
+    "sealed": {
+      "inbound": false,
+      "outbound": false
+    }
+  },
+  "first_user": {
+    "nick": "Root User",
+    "desc": "The first user and administrator.",
+    "autolook": {
+      "enabled": true
+    },
+    "chat": {
+      "enabled": true
+    }
+  },
+  "items": {
+    "glued": false
+  },
+  "rooms": {
+    "sealed": {
+      "inbound": false,
+      "outbound": false
+    }
+  },
+  "users": {
+    "autolook": {
+      "enabled": true
+    },
+    "chat": {
+      "enabled": true
+    }
+  },
+  "help": {
+    "columns": 6
+  }
+}
