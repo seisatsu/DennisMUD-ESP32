@@ -38,7 +38,7 @@ from lib import common
 builtins.COMMON = common
 
 # The directory where command modules are stored, relative to this directory.
-COMMAND_DIR = "commands/"
+COMMAND_DIR = "commands"
 
 # A string list of all characters allowed in user commands.
 ALLOWED_CHARACTERS = string.ascii_letters + string.digits + string.punctuation + ' '
@@ -84,21 +84,14 @@ class Shell:
         for command in command_modules:
             # Python files in this directory are command modules. Construct modules.
             if command.endswith(".py") and not command.startswith('_'):
-                command_path = os.path.join(os.getcwd(), COMMAND_DIR, command)
                 cname = command[:-3].replace('_', ' ')
 
                 # Give an error if another command with the same name is already loaded.
                 if cname in self._commands:
                     self._log.error("A command by this name was loaded twice: {cname}", cname=cname)
 
-                # Different import code recommended for different Python versions.
-                if sys.version_info[1] < 5:
-                    self._commands[cname] = importlib.machinery.SourceFileLoader(cname, command_path).load_module()
-                else:
-                    spec = importlib.util.spec_from_file_location(cname, command_path)
-                    mod = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(mod)
-                    self._commands[cname] = mod
+                # This is the only usable import method compatible with MicroPython.
+                self._commands[cname] = getattr(__import__(COMMAND_DIR+'.'+command[:-3]), (command[:-3]))
 
                 # Set up Aliases for this command.
                 # Aliases are alternative names for a command.
