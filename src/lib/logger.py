@@ -27,7 +27,8 @@
 
 import datetime
 import time
-import traceback
+
+from lib.contrib_micropython_lib import traceback
 
 # Variables shared between all Logger instances.
 _LOGFILE = None

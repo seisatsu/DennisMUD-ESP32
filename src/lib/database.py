@@ -27,7 +27,8 @@
 
 import json
 import os
-import traceback
+
+from lib.contrib_micropython_lib import traceback
 
 from lib.logger import Logger
 
