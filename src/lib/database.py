@@ -29,10 +29,9 @@ import json
 import os
 
 from lib.contrib_micropython_lib import traceback
+from lib.contrib_micropython_lib import micropydatabase
 
 from lib.logger import Logger
-
-from tinydb import TinyDB, Query
 
 DB_VERSION = 5
 
@@ -40,10 +39,10 @@ DB_VERSION = 5
 class DatabaseManager:
     """The Database Manager
 
-    This manager handles interactions with a TinyDB database corresponding to the current game world.
+    This manager handles interactions with a MicroPyDatabase database corresponding to the current game world.
     After documents are pulled from a table and modified, they need to be upserted for the changes to save.
 
-    :ivar database: The TinyDB database instance for the world.
+    :ivar database: The MicroPyDatabase database instance for the world.
     :ivar rooms: The table of all rooms in the database.
     :ivar users: The table of all users in the database.
     :ivar items: The table of all items in the database.
@@ -52,7 +51,7 @@ class DatabaseManager:
     def __init__(self, filename, defaults, log=None):
         """Database Manager Initializer
 
-        :param filename: The relative or absolute filename of the TinyDB database file.
+        :param filename: The relative or absolute filename of the MicroPyDatabase database file.
         :param defaults: The defaults config dict or pseudo-dict.
         :param log: Alternative logging facility, if set. Otherwise use our standard Logger.
         """
@@ -87,15 +86,6 @@ class DatabaseManager:
                 "If you are sure the database isn't in use, delete this file: {filename}.lock", filename=self._filename)
             return None
 
-        # See if we can access the database file. If not, then fail.
-        try:
-            with open(self._filename, "a") as f:
-                pass
-        except:
-            self._log.critical("Could not open database file: {filename}", filename=self._filename)
-            self._log.critical(traceback.format_exc(1))
-            return False
-
         # Attempt to create the lockfile. If we can't, then fail.
         try:
             with open(self._filename + ".lock", "a") as f:
@@ -107,27 +97,30 @@ class DatabaseManager:
 
         self._log.info("Loading database: {filename}", filename=self._filename)
 
-        # Try to load the database file. If an error occurs, fail.
+        # See if we can access the database file. If not, then fail.
         try:
-            self.database = TinyDB(self._filename)
+            self.database = micropydatabase.Database.open(self._filename)
         except:
-            self._log.critical("Error from TinyDB while loading database: {filename}", filename=self._filename)
-            self._log.critical(traceback.format_exc(1))
-            return False
+            try:
+                self.database = micropydatabase.Database.create(self._filename)
+            except:
+                self._log.critical("Could not create or open database file: {filename}", filename=self._filename)
+                self._log.critical(traceback.format_exc(1))
+                return False
 
         # Load the rooms, users, items, and _info tables.
-        self.rooms = self.database.table("rooms")
-        self.users = self.database.table("users")
-        self.items = self.database.table("items")
-        self._info = self.database.table("_info")
+        self.rooms = self.database.open_table("rooms")
+        self.users = self.database.open_table("users")
+        self.items = self.database.open_table("items")
+        self._info = self.database.open_table("_info")
 
         # If the info table is empty, assume a new database and add an info record containing the current version.
-        if len(self._info.all()) == 0:
+        if len(self._info.query({})) is None:
             self._info.insert({"version": DB_VERSION})
 
         # Otherwise read out the existing info record and check if it's ok.
         else:
-            info_record = self._info.all()[0]
+            info_record = self._info.find({})
 
             # This either needs to be the current version or the version we are updating from.
             # The _UPDATE_FROM_VERSION variable is identical to the current database version,
@@ -156,12 +149,12 @@ class DatabaseManager:
                 return False
 
         # If there are no rooms, make the initial room.
-        if len(self.rooms.all()) == 0:
+        if len(self.rooms.query({})) is None:
             self._log.info("Initializing rooms table.")
             self._init_room()
 
         # If there are no users, make the root user.
-        if len(self.users.all()) == 0:
+        if len(self.users.query({})) is None:
             self._log.info("Initializing users table.")
             self._init_user()
 
@@ -179,8 +172,10 @@ class DatabaseManager:
 
         :return: True
         """
-        q = Query()
-        self.rooms.upsert(document, q.id == document["id"])
+        if self.rooms.find({"id": document["id"]}):
+            self.rooms.update({"id": document["id"]}, document)
+        else:
+            self.rooms.insert(document)
         return True
 
     def upsert_item(self, document):
@@ -193,8 +188,10 @@ class DatabaseManager:
 
         :return: True
         """
-        q = Query()
-        self.items.upsert(document, q.id == document["id"])
+        if self.items.find({"id": document["id"]}):
+            self.items.update({"id": document["id"]}, document)
+        else:
+            self.items.insert(document)
         return True
 
     def upsert_user(self, document):
@@ -207,8 +204,10 @@ class DatabaseManager:
 
         :return: True
         """
-        q = Query()
-        self.users.upsert(document, q.name == document["name"])
+        if self.users.find({"name": document["name"]}):
+            self.users.update({"name": document["name"]}, document)
+        else:
+            self.users.insert(document)
         return True
 
     def delete_room(self, document):
@@ -218,11 +217,11 @@ class DatabaseManager:
 
         :return: True if succeeded, False if the document didn't exist.
         """
-        q = Query()
-        removed = self.rooms.remove(q.id == document["id"])
-        if not removed:
+        try:
+            self.rooms.delete({"id": document["id"]})
+            return True
+        except:
             return False
-        return True
 
     def delete_item(self, document):
         """Delete an item.
@@ -231,11 +230,11 @@ class DatabaseManager:
 
         :return: True if succeeded, False if the document didn't exist.
         """
-        q = Query()
-        removed = self.items.remove(q.id == document["id"])
-        if not removed:
+        try:
+            self.items.delete({"id": document["id"]})
+            return True
+        except:
             return False
-        return True
 
     def delete_user(self, document):
         """Delete a user.
@@ -246,12 +245,13 @@ class DatabaseManager:
 
         :return: True if succeeded, False if the document didn't exist.
         """
-        q = Query()
-        removed = self.users.remove(q.name == document["name"])
-        if not removed:
+        try:
+            self.users.delete({"name": document["name"]})
+            return True
+        except:
             return False
-        return True
 
+# TODO: Resume Here
     def room_by_id(self, roomid, clean=True):
         """Get a room by its id.
 

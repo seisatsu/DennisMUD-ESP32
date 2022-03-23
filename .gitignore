@@ -4,3 +4,6 @@ firmware/*.bin
 # Python virtual environments
 venv
 .venv
+
+# PyCharm environment
+.idea
